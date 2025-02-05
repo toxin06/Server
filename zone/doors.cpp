@@ -35,6 +35,8 @@
 
 #include <string.h>
 
+#include <glm/ext/matrix_transform.hpp>
+
 #define OPEN_DOOR 0x02
 #define CLOSE_DOOR 0x03
 #define OPEN_INVDOOR 0x03
@@ -969,4 +971,80 @@ bool Doors::GetIsDoorBlacklisted()
 
 bool Doors::IsDoorBlacklisted() {
 	return m_is_blacklisted_to_open;
+}
+
+bool Doors::IsDoorBetween(glm::vec4 loc_a, glm::vec4 loc_c, uint16 door_size, float door_depth) {
+	glm::vec4 door_loc = GetPosition();
+	glm::vec3 door_loc_v3 = glm::vec3(door_loc);
+	uint16 door_width = door_size / 4;
+	glm::vec3 door_center_offset = glm::vec3(door_width * 0.5f - 2.5f, door_depth * 0.5f - 2.5f, 0.0f);
+	glm::vec3 box_corner1 = glm::vec3(-door_width * 0.5f, -door_depth * 0.5f, 0.0f);
+	glm::vec3 box_corner2 = glm::vec3(door_width * 0.5f, -door_depth * 0.5f, 0.0f);
+	glm::vec3 box_corner3 = glm::vec3(door_width * 0.5f, door_depth * 0.5f, 0.0f);
+	glm::vec3 box_corner4 = glm::vec3(-door_width * 0.5f, door_depth * 0.5f, 0.0f);
+
+	float door_heading_radians = (door_loc.w / 512.0f) * 6.283184f; // 6.283184 = 2*PI
+
+	if (fabs(door_loc.w) < 1e-6f) {
+		door_heading_radians = 3.141592653589793f;
+	}
+
+	glm::mat4 door_rotation = glm::rotate(glm::mat4(1.0f), door_heading_radians, glm::vec3(0.0f, 0.0f, 1.0f));
+	glm::vec3 door_center = door_loc_v3 + glm::vec3(door_rotation * glm::vec4(door_center_offset, 1.0f));
+	glm::mat4 transform = glm::translate(glm::mat4(1.0f), door_center) * door_rotation;
+
+	glm::vec3 door_corner1 = glm::vec3(transform * glm::vec4(box_corner1, 1.0f));
+	glm::vec3 door_corner2 = glm::vec3(transform * glm::vec4(box_corner2, 1.0f));
+	glm::vec3 door_corner3 = glm::vec3(transform * glm::vec4(box_corner3, 1.0f));
+	glm::vec3 door_corner4 = glm::vec3(transform * glm::vec4(box_corner4, 1.0f));
+
+	LogTestDebug("door_heading_radians:[{}]", door_heading_radians); //deleteme
+	LogTestDebug("door_loc.x = {}, door_loc.y = {}, door_loc.z = {}, door_loc.w = {}", door_loc.x, door_loc.y, door_loc.z, door_loc.w); //deleteme
+	LogTestDebug("door_center.x = {}, door_center.y = {}, door_center.z = {}", door_center.x, door_center.y, door_center.z); //deleteme
+	LogTestDebug("door_corner1.x = {}, door_corner1.y = {}, door_corner1.z = {}", door_corner1.x, door_corner1.y, door_corner1.z); //deleteme
+	LogTestDebug("door_corner2.x = {}, door_corner2.y = {}, door_corner2.z = {}", door_corner2.x, door_corner2.y, door_corner2.z); //deleteme
+	LogTestDebug("door_corner3.x = {}, door_corner3.y = {}, door_corner3.z = {}", door_corner3.x, door_corner3.y, door_corner3.z); //deleteme
+	LogTestDebug("door_corner4.x = {}, door_corner4.y = {}, door_corner4.z = {}", door_corner4.x, door_corner4.y, door_corner4.z); //deleteme
+
+	auto npc = new NPC(content_db.LoadNPCTypesData(555125), 0, loc_a, GravityBehavior::Water); if (npc) { entity_list.AddNPC(npc); }
+	npc = new NPC(content_db.LoadNPCTypesData(555126), 0, door_loc, GravityBehavior::Water); if (npc) { entity_list.AddNPC(npc); }
+	npc = new NPC(content_db.LoadNPCTypesData(555127), 0, loc_c, GravityBehavior::Water); if (npc) { entity_list.AddNPC(npc); }
+	npc = new NPC(content_db.LoadNPCTypesData(555132), 0, glm::vec4(door_center.x, door_center.y, door_center.z, 0), GravityBehavior::Water); if (npc) { entity_list.AddNPC(npc); }
+	npc = new NPC(content_db.LoadNPCTypesData(555128), 0, glm::vec4(door_corner1.x, door_corner1.y, door_corner1.z, 0), GravityBehavior::Water); if (npc) { entity_list.AddNPC(npc); }
+	npc = new NPC(content_db.LoadNPCTypesData(555129), 0, glm::vec4(door_corner2.x, door_corner2.y, door_corner2.z, 0), GravityBehavior::Water); if (npc) { entity_list.AddNPC(npc); }
+	npc = new NPC(content_db.LoadNPCTypesData(555130), 0, glm::vec4(door_corner3.x, door_corner3.y, door_corner3.z, 0), GravityBehavior::Water); if (npc) { entity_list.AddNPC(npc); }
+	npc = new NPC(content_db.LoadNPCTypesData(555131), 0, glm::vec4(door_corner4.x, door_corner4.y, door_corner4.z, 0), GravityBehavior::Water); if (npc) { entity_list.AddNPC(npc); }
+
+	// Intersection function to test if two line segments intersect
+	auto intersects_box = [](const glm::vec3& a, const glm::vec3& b, const glm::vec3& p1, const glm::vec3& p2) {
+		glm::vec3 ab = b - a;
+		glm::vec3 p1p2 = p2 - p1;
+
+		glm::vec3 cross = glm::cross(ab, p1p2);
+		float cross_magnitude_squared = glm::dot(cross, cross); // More efficient than sqrt
+
+		if (cross_magnitude_squared < 1e-6f) {
+			return false; // Lines are parallel or coincident (treat as no intersection)
+		}
+
+		float t = glm::dot(glm::cross(p1 - a, p1p2), cross) / cross_magnitude_squared;
+		float u = glm::dot(glm::cross(p1 - a, ab), cross) / cross_magnitude_squared;
+
+		return (t >= 0.0f && t <= 1.0f && u >= 0.0f && u <= 1.0f);
+		};
+
+		// Check intersection with each edge of the door bounding box
+	glm::vec3 loc_a_vec3(loc_a.x, loc_a.y, loc_a.z);
+	glm::vec3 loc_c_vec3(loc_c.x, loc_c.y, loc_c.z);
+
+	if (
+		intersects_box(loc_a_vec3, loc_c_vec3, door_corner1, door_corner2) ||
+		intersects_box(loc_a_vec3, loc_c_vec3, door_corner2, door_corner3) ||
+		intersects_box(loc_a_vec3, loc_c_vec3, door_corner3, door_corner4) ||
+		intersects_box(loc_a_vec3, loc_c_vec3, door_corner4, door_corner1)
+		) {
+		return true;
+	}
+
+	return false;
 }

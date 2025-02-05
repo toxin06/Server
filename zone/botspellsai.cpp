@@ -61,10 +61,7 @@ bool Bot::AICastSpell(Mob* tar, uint8 chance, uint16 spell_type, uint16 sub_targ
 	bot_spell.SpellIndex = 0;
 	bot_spell.ManaCost = 0;
 
-	if (BotSpellTypeRequiresLoS(spell_type) && tar != this) {
-		SetHasLoS(DoLosChecks(tar));
-	}
-	else {
+	if (!BotSpellTypeRequiresLoS(spell_type) || tar == this) {
 		SetHasLoS(true);
 	}
 
@@ -219,7 +216,7 @@ bool Bot::AICastSpell(Mob* tar, uint8 chance, uint16 spell_type, uint16 sub_targ
 
 	for (const auto& s : bot_spell_list) {
 
-		if (!IsValidSpellAndLoS(s.SpellId, HasLoS())) {
+		if (!IsValidSpellAndLoS(s.SpellId, (IsAEBotSpellType(spell_type) ? true : HasLoS()))) {
 			continue;
 		}
 
@@ -441,24 +438,24 @@ bool Bot::BotCastNuke(Mob* tar, uint8 bot_class, BotSpell& bot_spell, uint16 spe
 			bot_spell = GetBestBotSpellForStunByTargetType(this, ST_TargetOptional, spell_type, IsAEBotSpellType(spell_type), tar);
 		}
 		
-		if (!IsValidSpellAndLoS(bot_spell.SpellId, HasLoS())) {
+		if (!IsValidSpellAndLoS(bot_spell.SpellId, (IsAEBotSpellType(spell_type) ? true : HasLoS()))) {
 			return false;
 		}
 	}
 
-	if (!IsValidSpellAndLoS(bot_spell.SpellId, HasLoS())) {
+	if (!IsValidSpellAndLoS(bot_spell.SpellId, (IsAEBotSpellType(spell_type) ? true : HasLoS()))) {
 		bot_spell = GetBestBotSpellForNukeByBodyType(this, tar->GetBodyType(), spell_type, IsAEBotSpellType(spell_type), tar);
 	}
 
-	if (!IsValidSpellAndLoS(bot_spell.SpellId, HasLoS()) && spell_type == BotSpellTypes::Nuke && bot_class == Class::Wizard) {
+	if (!IsValidSpellAndLoS(bot_spell.SpellId, IsAEBotSpellType(spell_type)) && spell_type == BotSpellTypes::Nuke && bot_class == Class::Wizard) {
 		bot_spell = GetBestBotWizardNukeSpellByTargetResists(this, tar, spell_type);
 	}
 
-	if (!IsValidSpellAndLoS(bot_spell.SpellId, HasLoS())) {
+	if (!IsValidSpellAndLoS(bot_spell.SpellId, (IsAEBotSpellType(spell_type) ? true : HasLoS()))) {
 		std::vector<BotSpell_wPriority> bot_spell_list = GetPrioritizedBotSpellsBySpellType(this, spell_type, tar, IsAEBotSpellType(spell_type));
 
 		for (const auto& s : bot_spell_list) {
-			if (!IsValidSpellAndLoS(s.SpellId, HasLoS())) {
+			if (!IsValidSpellAndLoS(s.SpellId, (IsAEBotSpellType(spell_type) ? true : HasLoS()))) {
 				continue;
 			}
 
@@ -1514,7 +1511,7 @@ Mob* Bot::GetFirstIncomingMobToMez(Bot* caster, int16 spell_id, uint16 spell_typ
 			}
 
 			if (result) {
-				caster->SetHasLoS(true);
+				//caster->SetHasLoS(true); //TODO - is this needed?
 
 				return result;
 			}

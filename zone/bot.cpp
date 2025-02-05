@@ -2312,7 +2312,7 @@ void Bot::AI_Process()
 		if (GetPullingFlag()) {
 			if (!TargetValidation(tar)) { return; }
 
-			if (!DoLosChecks(tar)) {
+			if (RuleB(Bots, BotsRequireLoS) && !HasLoS()) {
 				return;
 			}
 
@@ -3185,14 +3185,17 @@ bool Bot::IsValidTarget(
 		return false;
 	}
 
+	SetHasLoS(DoLosChecks(tar));
+
 	bool invalid_target_state = false;
+
 	if (HOLDING ||
 		!tar->IsNPC() ||
 		(tar->IsMezzed() && !HasBotAttackFlag(tar)) ||
 		(!Charmed() && tar->GetUltimateOwner()->IsOfClientBotMerc()) ||
 		lo_distance > leash_distance ||
 		tar_distance > leash_distance ||
-		(!GetAttackingFlag() && !CheckLosCheat(tar) && !leash_owner->CheckLosCheat(tar)) ||
+		(!GetAttackingFlag() && !HasLoS()) ||
 		!IsAttackAllowed(tar)
 	) {
 		invalid_target_state = true;
@@ -11995,7 +11998,7 @@ bool Bot::HasRequiredLoSForPositioning(Mob* tar) {
 		return true;
 	}
 
-	if (RequiresLoSForPositioning() && !DoLosChecks(tar)) {
+	if (RequiresLoSForPositioning() && !HasLoS()) {
 		return false;
 	}
 
@@ -12093,7 +12096,7 @@ bool Bot::HasValidAETarget(Bot* caster, uint16 spell_id, uint16 spell_type, Mob*
 		return false;
 	}
 
-	SetHasLoS(true);
+	//SetHasLoS(true); //TODO is this needed?
 
 	return true;
 }

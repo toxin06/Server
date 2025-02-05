@@ -76,6 +76,7 @@ public:
 	bool IsDestinationZoneSame() const;
 
 	bool IsDoorBlacklisted();
+	bool IsDoorBetween(glm::vec4 loc_a, glm::vec4 loc_c, uint16 door_size, float door_depth = 5.0f);
 
 	const char* GetDoorZone() const { return m_zone_name; }
 

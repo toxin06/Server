@@ -530,6 +530,9 @@ void bot_command_cast(Client* c, const Seperator* sep)
 				continue;
 			}
 
+			bool requires_los = !(IsAnyHealSpell(spell_id) && !IsPBAESpell(spell_id));
+			bot_iter->SetHasLoS(requires_los ? bot_iter->DoLosChecks(new_tar) : true);
+
 			if (!bot_iter->AttemptAACastSpell(tar, spell_id, rank)) {
 				continue;
 			}
@@ -548,6 +551,9 @@ void bot_command_cast(Client* c, const Seperator* sep)
 				tar = bot_iter;
 			}
 
+			bool requires_los = !(IsAnyHealSpell(chosen_spell_id) && !IsPBAESpell(chosen_spell_id));
+			bot_iter->SetHasLoS(requires_los ? bot_iter->DoLosChecks(new_tar) : true);
+
 			if (bot_iter->AttemptForcedCastSpell(tar, chosen_spell_id)) {
 				if (!first_found) {
 					first_found = bot_iter;
@@ -561,7 +567,8 @@ void bot_command_cast(Client* c, const Seperator* sep)
 		}
 		else {
 			bot_iter->SetCommandedSpell(true);
-			
+			bot_iter->SetHasLoS(BotSpellTypeRequiresLoS(spell_type) ? bot_iter->DoLosChecks(new_tar) : true);
+
 			if (bot_iter->AICastSpell(new_tar, 100, spell_type, sub_target_type, sub_type)) {
 				if (!first_found) {
 					first_found = bot_iter;
